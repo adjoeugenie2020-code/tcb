@@ -12,7 +12,7 @@ export async function askHuggingFace(question: string): Promise<string> {
     }
 
     const response = await axios.post(
-      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct',
+      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
       {
         inputs: question,
         parameters: {
