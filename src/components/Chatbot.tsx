@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User, Minimize2 } from 'lucide-react';
-import { askGroq } from '../api/chatbot';
+import { askHuggingFace } from '../api/chatbot';
 
 interface Message {
   id: string;
+  from: 'user' | 'ai';
   text: string;
-  isBot: boolean;
   timestamp: Date;
   isLoading?: boolean;
 }
@@ -16,8 +16,8 @@ const Chatbot = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Salut ! Je suis l'assistant IA de Rénato, propulsé par Groq et Llama3. Comment puis-je vous aider aujourd'hui ?",
-      isBot: true,
+      from: 'ai',
+      text: "Salut ! Je suis l'assistant IA de Rénato, propulsé par Hugging Face et Mistral-7B. Comment puis-je vous aider aujourd'hui ?",
       timestamp: new Date()
     }
   ]);
@@ -40,13 +40,13 @@ const Chatbot = () => {
     }
   }, [isOpen, isMinimized]);
 
-  const handleSendMessage = async () => {
+  const sendMessage = async () => {
     if (!inputValue.trim() || isTyping) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
+      from: 'user',
       text: inputValue.trim(),
-      isBot: false,
       timestamp: new Date()
     };
 
@@ -58,15 +58,15 @@ const Chatbot = () => {
     // Message de chargement
     const loadingMessage: Message = {
       id: (Date.now() + 1).toString(),
+      from: 'ai',
       text: 'Je réfléchis...',
-      isBot: true,
       timestamp: new Date(),
       isLoading: true
     };
     setMessages(prev => [...prev, loadingMessage]);
 
     try {
-      const response = await askGroq(currentInput);
+      const response = await askHuggingFace(currentInput);
 
       // Remplacer le message de chargement par la réponse
       setMessages(prev => {
@@ -75,8 +75,8 @@ const Chatbot = () => {
         if (loadingIndex !== -1) {
           newMessages[loadingIndex] = {
             id: (Date.now() + 2).toString(),
+            from: 'ai',
             text: response,
-            isBot: true,
             timestamp: new Date(),
             isLoading: false
           };
@@ -91,8 +91,8 @@ const Chatbot = () => {
         if (loadingIndex !== -1) {
           newMessages[loadingIndex] = {
             id: (Date.now() + 3).toString(),
+            from: 'ai',
             text: "Désolé, une erreur s'est produite. Veuillez réessayer plus tard.",
-            isBot: true,
             timestamp: new Date(),
             isLoading: false
           };
@@ -107,7 +107,7 @@ const Chatbot = () => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      sendMessage();
     }
   };
 
@@ -144,7 +144,7 @@ const Chatbot = () => {
               </div>
               <div>
                 <h3 className="font-semibold">Assistant IA Rénato</h3>
-                <p className="text-xs text-primary-100">Propulsé par Groq & Llama3</p>
+                <p className="text-xs text-primary-100">Propulsé par Hugging Face</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -172,24 +172,24 @@ const Chatbot = () => {
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
+                    className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`flex items-start space-x-2 max-w-xs ${
-                      message.isBot ? '' : 'flex-row-reverse space-x-reverse'
+                      message.from === 'user' ? 'flex-row-reverse space-x-reverse' : ''
                     }`}>
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        message.isBot ? 'bg-primary-100' : 'bg-blue-100'
+                        message.from === 'user' ? 'bg-blue-100' : 'bg-primary-100'
                       }`}>
-                        {message.isBot ? (
-                          <Bot className="h-4 w-4 text-primary-500" />
-                        ) : (
+                        {message.from === 'user' ? (
                           <User className="h-4 w-4 text-blue-500" />
+                        ) : (
+                          <Bot className="h-4 w-4 text-primary-500" />
                         )}
                       </div>
                       <div className={`p-3 rounded-lg shadow-sm ${
-                        message.isBot 
-                          ? 'bg-white text-gray-800 border border-gray-200' 
-                          : 'bg-blue-500 text-white'
+                        message.from === 'user'
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-white text-gray-800 border border-gray-200'
                       }`}>
                         <p className="text-sm leading-relaxed">
                           {message.isLoading ? (
@@ -206,7 +206,7 @@ const Chatbot = () => {
                           )}
                         </p>
                         <p className={`text-xs mt-1 ${
-                          message.isBot ? 'text-gray-500' : 'text-blue-100'
+                          message.from === 'user' ? 'text-blue-100' : 'text-gray-500'
                         }`}>
                           {message.timestamp.toLocaleTimeString('fr-FR', { 
                             hour: '2-digit', 
@@ -230,7 +230,7 @@ const Chatbot = () => {
                         key={index}
                         onClick={() => {
                           setInputValue(question);
-                          setTimeout(() => handleSendMessage(), 100);
+                          setTimeout(() => sendMessage(), 100);
                         }}
                         className="text-xs bg-white hover:bg-gray-100 text-gray-700 px-3 py-1 rounded-full border border-gray-200 transition-colors duration-200"
                       >
@@ -255,7 +255,7 @@ const Chatbot = () => {
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
-                    onClick={handleSendMessage}
+                    onClick={sendMessage}
                     disabled={!inputValue.trim() || isTyping}
                     className="bg-primary-500 text-white p-2 rounded-lg hover:bg-primary-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Envoyer"
@@ -264,7 +264,7 @@ const Chatbot = () => {
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  Propulsé par Groq & Llama3
+                  Propulsé par Hugging Face & Mistral-7B
                 </p>
               </div>
             </>
